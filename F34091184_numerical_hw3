@@ -1,0 +1,118 @@
+import numpy as np
+from scipy.interpolate import lagrange
+from math import cos, factorial
+
+print("\n--------------------第一題--------------------")
+
+# 資料點
+x_vals1 = np.array([0.698, 0.733, 0.768, 0.803])
+y_vals1 = np.array([0.7661, 0.7432, 0.7193, 0.6946])
+x_target1 = 0.750
+true_val1 = cos(x_target1)
+
+def lagrange_interpolation(x_vals1, y_vals1, x_target1, degree1):
+    indices1 = np.argsort(np.abs(x_vals1 - x_target1))[:degree1 + 1]
+    x_sel1 = x_vals1[indices1]
+    y_sel1 = y_vals1[indices1]
+    poly1 = lagrange(x_sel1, y_sel1)
+    y_interp1 = poly1(x_target1)
+
+    # 估算 error bound
+    h1 = max(abs(x_target1 - xi) for xi in x_sel1)
+    error_bound = (h1**(degree1+1)) / factorial(degree1+1)
+    return y_interp1, abs(true_val1 - y_interp1), error_bound
+
+for deg in range(1, 5):
+    y_interp1, error1, err_bound = lagrange_interpolation(x_vals1, y_vals1, x_target1, deg)
+    print(f"Degree {deg}: Approx = {y_interp1:.6f}, Error = {error1:.6e}, Error Bound ~ {err_bound:.2e}")
+
+print("\n--------------------第二題--------------------")
+
+# 原始資料 (x, y = e^{-x})
+x_data = np.array([0.3, 0.4, 0.5, 0.6])
+y_data = np.exp(-x_data)
+
+def divided_differences(z, f):
+    n = len(z)
+    coef = np.copy(f)
+    for j in range(1, n):
+        coef[j:] = (coef[j:] - coef[j - 1:-1]) / (z[j:] - z[:n - j])
+    return coef
+
+def newton_poly(z_data, coef, y):
+    n = len(coef)
+    result = coef[0]
+    product = 1.0
+    for i in range(1, n):
+        product *= (y - z_data[i - 1])
+        result += coef[i] * product
+    return result
+
+def inverse_interp_local(y_data, x_data, y_target, num_points=3):
+    idx = np.argsort(np.abs(y_data - y_target))[:num_points]
+    z_sel = y_data[idx]
+    f_sel = x_data[idx]
+    coef = divided_differences(z_sel, f_sel)
+    return newton_poly(z_sel, coef, y_target)
+
+# 初始值
+x0 = 0.56
+max_iter = 50
+tolerance = 1.2e-4
+
+print("Improved Iterated Inverse Interpolation:")
+print("Step\tx_n\t\te^{-x_n}\t\tx_{n+1}")
+
+for i in range(max_iter):
+    y = np.exp(-x0)  # ← 關鍵改動：用 e^{-x_n} 作為反插值輸入
+    x1 = inverse_interp_local(y_data, x_data, y, num_points=3)
+
+    print(f"{i+1:>2}\t{x0:.10f}\t{y:.10f}\t{x1:.10f}")
+
+    if abs(x1 - x0) < tolerance:
+        print("\nConverged!")
+        break
+    x0 = x1
+
+print("\n--------------------第三題--------------------")
+
+from scipy.interpolate import CubicHermiteSpline # Import CubicHermiteSpline
+import matplotlib.pyplot as plt
+
+T = np.array([0, 3, 5, 8, 13])
+D = np.array([0, 200, 375, 620, 990])
+V = np.array([75, 77, 80, 74, 72])  # 單位: ft/s
+
+# 建立 Hermite 插值 using CubicHermiteSpline
+hermite = CubicHermiteSpline(T, D, dydx=V) # Use CubicHermiteSpline with dydx for derivatives
+
+# a. 預測位置與速度
+t_pred = 10
+position = hermite(t_pred)
+speed = hermite.derivative(1)(t_pred) # Use derivative(1) to get the first derivative (speed)
+print(f"a. At t=10s, position = {position:.2f} ft, speed = {speed:.2f} ft/s")
+
+# b. 檢查是否超過 55 mph ≈ 80.6667 ft/s
+t_check = np.linspace(0, 13, 200)
+v_check = hermite.derivative(1)(t_check) # Use derivative(1) for speed
+
+above_limit = t_check[v_check > 80.6667]
+if len(above_limit) > 0:
+    print(f"b. First time exceeding 55 mph: t = {above_limit[0]:.2f} s")
+else:
+    print("b. Car never exceeds 55 mph")
+
+# c. 預測最大速度
+max_speed = np.max(v_check)
+max_time = t_check[np.argmax(v_check)]
+print(f"c. Maximum predicted speed = {max_speed:.2f} ft/s at t = {max_time:.2f} s")
+
+# 額外：速度圖
+plt.plot(t_check, v_check, label='Speed (ft/s)')
+plt.axhline(80.67, color='red', linestyle='--', label='55 mph limit')
+plt.xlabel('Time (s)')
+plt.ylabel('Speed (ft/s)')
+plt.title('Car Speed Over Time (Hermite Interpolation)')
+plt.legend()
+plt.grid(True)
+plt.show()
