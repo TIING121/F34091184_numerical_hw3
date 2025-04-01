@@ -11,7 +11,7 @@ true_val_1 = cos(x_target_1)
 
 # 因只有4點，degree最多到3
 degrees_to_test = [1, 2, 3]
-print(f"\nTrue cos({x_target}) = {true_val:.6f}")
+print(f"\nTrue cos({x_target_1}) = {true_val_1:.6f}")
 
 for deg in degrees_to_test:
     indices = np.argsort(np.abs(x_vals_1 - x_target_1))[:deg + 1]
@@ -37,7 +37,7 @@ for deg in degrees_to_test:
     error_bound = prod_term / factorial(deg + 1)
 
     print(f"\nDegree = {deg}")
-    print(f"  Approximation at x = {x_target_1}: {y_interp_1:.6f}")    
+    print(f"  Approximation = {y_interp_1:.6f}")    
     print(f"  Error Bound = {error_bound:.6e}")
 
 print("\nDegree = 4")
@@ -76,7 +76,7 @@ x0 = 0.565
 max_iter = 50
 tolerance = 1e-4
 
-print("Iterated Inverse Interpolation:")
+print("\nIterated Inverse Interpolation:")
 print("Step\tx_n\t\te^{-x_n}\t\tx_{n+1}")
 
 for i in range(max_iter):
@@ -89,3 +89,61 @@ for i in range(max_iter):
         print("\nConverged : x = "f"{x0:.4f}")
         break
     x0 = x1
+
+print()
+print("\n--------------------第三題--------------------")
+
+T = np.array([0, 3, 5, 8, 13], dtype=float)
+D = np.array([0, 200, 375, 620, 990], dtype=float)
+V = np.array([75, 77, 80, 74, 72], dtype=float)
+
+n = len(T)
+z = np.repeat(T, 2)
+Q = np.zeros((2 * n, 2 * n))
+Q[::2, 0] = D
+Q[1::2, 0] = D
+Q[::2, 1] = V
+Q[1::2, 1] = V
+
+for i in range(2, 2 * n):
+    for j in range(2, i + 1):
+        Q[i][j] = (Q[i][j-1] - Q[i-1][j-1]) / (z[i] - z[i-j])
+
+def hermite_eval(x, z, Q):
+    n = len(z)
+    result = Q[0, 0]
+    product = 1.0
+    for i in range(1, n):
+        product *= (x - z[i-1])
+        result += Q[i, i] * product
+    return result
+
+def numerical_derivative(f, x, h=1e-5):
+    return (f(x + h) - f(x - h)) / (2 * h)
+
+H = lambda t: hermite_eval(t, z, Q)
+
+#(a)
+t_eval = 10
+D10 = H(t_eval)
+V10 = numerical_derivative(H, t_eval)
+print("\n(a) \n  D(10) = "f"{D10:.4f}"" (ft)")
+print("  V(10) = "f"{V10:.4f}"" (ft/s)")
+
+#(b)
+speed_limit = 80.667
+t_check = np.linspace(0, 13, 1000)
+V_check = [numerical_derivative(H, t) for t in t_check]
+over_speed_times = t_check[np.array(V_check) > speed_limit]
+if len(over_speed_times) > 0:
+    print("\n(b) \n  The car exceeds a 55 mi/h speed limit !")
+    first_exceed_time = over_speed_times[0]
+    print("  First time over limit (sec) = "f"{first_exceed_time:.4f}")
+else:
+    print("\n(b) \n  NOT exceeded 80.67 ft/s ")
+
+#(c)
+max_speed = max(V_check)
+max_speed_time = t_check[np.argmax(V_check)]
+print("\n(c) \n  Max speed = "f"{max_speed:.4f}"" (ft/s)")
+print("  Time of max speed = "f"{max_speed_time:.4f}"" (sec)")
