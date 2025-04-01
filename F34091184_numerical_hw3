@@ -138,7 +138,7 @@ over_speed_times = t_check[np.array(V_check) > speed_limit]
 if len(over_speed_times) > 0:
     print("\n(b) \n  The car exceeds a 55 mi/h speed limit !")
     first_exceed_time = over_speed_times[0]
-    print("  First time over limit (sec) = "f"{first_exceed_time:.4f}")
+    print("  First time over limit = "f"{first_exceed_time:.4f}"" (sec)")
 else:
     print("\n(b) \n  NOT exceeded 80.67 ft/s ")
 
